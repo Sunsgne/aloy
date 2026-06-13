@@ -48,6 +48,11 @@ Milestone 3: Device inventory and RouterOS initialization.
   and starts onboarding.
 - Added authenticated device heartbeat ingestion with timestamps, monotonic
   sequences for replay protection, identity refresh, and onboarding progress.
+- Added management WireGuard plan generation without private key material,
+  including strict validation, Aloy-managed tagging, and verification targets.
+- Added ADOPT_EXISTING read-only configuration analysis that protects untagged
+  objects, identifies high-risk conflicts, and limits takeover scope to
+  explicitly Aloy-managed resources.
 
 ## Database changes
 
@@ -80,6 +85,9 @@ Milestone 3: Device inventory and RouterOS initialization.
 - Added `GET /api/v1/devices/:id/bootstrap-script`.
 - Added `POST /api/v1/device-onboarding/register`.
 - Added `POST /api/v1/device-reports/heartbeat`.
+- Added `GET /api/v1/onboarding-sessions/:id`.
+- Added `POST /api/v1/onboarding-sessions/:id/management-wireguard-plan`.
+- Added `POST /api/v1/onboarding-sessions/:id/adoption-preview`.
 - Added `GET /api/v1/onboarding-sessions`.
 
 ## Known issues
@@ -101,4 +109,4 @@ Milestone 3: Device inventory and RouterOS initialization.
 
 ## Next task
 
-- Add management WireGuard planning and Existing Config read-only adoption.
+- Add device identity, package, Device Mode, and capability discovery.

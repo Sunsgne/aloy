@@ -203,6 +203,8 @@ model OnboardingSession {
   startedAt   DateTime?
   completedAt DateTime?
   error       String?
+  managementPlan Json?
+  adoptionReport Json?
   steps       OnboardingStep[]
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt

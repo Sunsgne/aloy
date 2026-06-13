@@ -259,3 +259,26 @@ paths:
       responses:
         "200":
           description: Current tenant RouterOS onboarding sessions and steps.
+  /api/v1/onboarding-sessions/{id}:
+    get:
+      operationId: getOnboardingSession
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Onboarding session, device identity, plans, reports, and steps.
+  /api/v1/onboarding-sessions/{id}/management-wireguard-plan:
+    post:
+      operationId: createManagementWireGuardPlan
+      responses:
+        "201":
+          description: Private-key-free RouterOS management WireGuard plan.
+  /api/v1/onboarding-sessions/{id}/adoption-preview:
+    post:
+      operationId: previewExistingConfigurationAdoption
+      responses:
+        "201":
+          description: Read-only conflict report and strictly tagged takeover scope.

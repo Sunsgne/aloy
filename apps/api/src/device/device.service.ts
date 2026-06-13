@@ -1,6 +1,12 @@
 import type { RequestContext } from "@aloy/shared";
 import { prisma, requireTenantScope } from "@aloy/database";
-import { generateBootstrapScript } from "@aloy/routeros-adapter";
+import {
+  analyzeExistingConfiguration,
+  buildManagementWireGuardPlan,
+  generateBootstrapScript,
+  type ExistingConfigItem,
+  type ManagementWireGuardPlanInput,
+} from "@aloy/routeros-adapter";
 import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 
@@ -404,6 +410,72 @@ export class DeviceService {
         steps: { orderBy: { position: "asc" } },
       },
       orderBy: { createdAt: "desc" },
+    });
+  }
+
+  async getOnboardingSession(context: RequestContext, id: string) {
+    const { tenantId } = requireTenantScope(context);
+    const session = await prisma.onboardingSession.findFirst({
+      where: { id, tenantId },
+      include: {
+        device: { include: { site: true, identity: true } },
+        steps: { orderBy: { position: "asc" } },
+      },
+    });
+    if (!session) {
+      throw new NotFoundException("Onboarding session not found");
+    }
+    return session;
+  }
+
+  async createManagementWireGuardPlan(
+    context: RequestContext,
+    sessionId: string,
+    input: ManagementWireGuardPlanInput,
+  ) {
+    const { tenantId } = requireTenantScope(context);
+    const session = await prisma.onboardingSession.findFirst({ where: { id: sessionId, tenantId } });
+    if (!session) {
+      throw new NotFoundException("Onboarding session not found");
+    }
+    let plan: ReturnType<typeof buildManagementWireGuardPlan>;
+    try {
+      plan = buildManagementWireGuardPlan(input);
+    } catch (error) {
+      throw new BadRequestException(error instanceof Error ? error.message : "Invalid WireGuard plan");
+    }
+    return prisma.$transaction(async (transaction) => {
+      const updated = await transaction.onboardingSession.update({
+        where: { id: sessionId },
+        data: { managementPlan: plan },
+        include: { steps: { orderBy: { position: "asc" } } },
+      });
+      await this.audit(transaction, context, tenantId, "onboarding.management-wireguard.plan", "OnboardingSession", sessionId);
+      return updated;
+    });
+  }
+
+  async previewAdoption(context: RequestContext, sessionId: string, items: ExistingConfigItem[]) {
+    const { tenantId } = requireTenantScope(context);
+    const session = await prisma.onboardingSession.findFirst({ where: { id: sessionId, tenantId } });
+    if (!session) {
+      throw new NotFoundException("Onboarding session not found");
+    }
+    if (session.mode !== "ADOPT_EXISTING") {
+      throw new BadRequestException("Adoption preview requires an ADOPT_EXISTING session");
+    }
+    if (!Array.isArray(items) || items.length > 10_000) {
+      throw new BadRequestException("A structured configuration snapshot with at most 10000 items is required");
+    }
+    const report = analyzeExistingConfiguration(items);
+    return prisma.$transaction(async (transaction) => {
+      const updated = await transaction.onboardingSession.update({
+        where: { id: sessionId },
+        data: { adoptionReport: report },
+        include: { steps: { orderBy: { position: "asc" } } },
+      });
+      await this.audit(transaction, context, tenantId, "onboarding.adoption.preview", "OnboardingSession", sessionId);
+      return updated;
     });
   }
 

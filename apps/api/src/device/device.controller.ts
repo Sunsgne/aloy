@@ -73,4 +73,45 @@ export class DeviceController {
   listOnboardingSessions(@CurrentRequestContext() context: RequestContext) {
     return this.deviceService.listOnboardingSessions(context);
   }
+
+  @Get("onboarding-sessions/:id")
+  @RequirePermissions("onboarding.read")
+  getOnboardingSession(@CurrentRequestContext() context: RequestContext, @Param("id") id: string) {
+    return this.deviceService.getOnboardingSession(context, id);
+  }
+
+  @Post("onboarding-sessions/:id/management-wireguard-plan")
+  @RequirePermissions("onboarding.write")
+  createManagementWireGuardPlan(
+    @CurrentRequestContext() context: RequestContext,
+    @Param("id") id: string,
+    @Body()
+    body: {
+      interfaceName?: string;
+      deviceAddress: string;
+      controllerPublicKey: string;
+      controllerEndpoint: string;
+      controllerPort?: number;
+      allowedControllerCidrs: string[];
+    },
+  ) {
+    return this.deviceService.createManagementWireGuardPlan(context, id, body);
+  }
+
+  @Post("onboarding-sessions/:id/adoption-preview")
+  @RequirePermissions("onboarding.write")
+  previewAdoption(
+    @CurrentRequestContext() context: RequestContext,
+    @Param("id") id: string,
+    @Body()
+    body: {
+      items: Array<{
+        kind: "IP_ADDRESS" | "BRIDGE" | "VLAN" | "DEFAULT_ROUTE" | "ROUTE" | "FIREWALL" | "OSPF" | "BGP" | "DNS" | "QUEUE";
+        identifier: string;
+        comment?: string;
+      }>;
+    },
+  ) {
+    return this.deviceService.previewAdoption(context, id, body.items);
+  }
 }
