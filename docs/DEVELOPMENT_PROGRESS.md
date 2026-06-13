@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-Milestone 1: Project skeleton.
+Milestone 2: Multi-tenancy and permissions.
 
 ## Completed
 
@@ -12,10 +12,15 @@ Milestone 1: Project skeleton.
 - Added shared, database, RouterOS adapter, SNMP adapter, and DNS adapter packages.
 - Added PostgreSQL, Redis, and VictoriaMetrics Docker Compose services.
 - Added lint, typecheck, test, build, CI, environment example, and base documentation.
+- Added identity and tenant Prisma models for Tenant, User, Role, Permission,
+  Subscription, API tokens, and audit events.
+- Added shared request context and mandatory tenant/platform access guards.
 
 ## Database changes
 
 - Added initial Prisma schema with `PlatformSetting`.
+- Added Milestone 2 identity, tenant, RBAC, subscription, API token, and audit
+  entities.
 
 ## API changes
 
@@ -41,4 +46,4 @@ Milestone 1: Project skeleton.
 
 ## Next task
 
-- Add Dockerfiles and run the full Milestone 1 stack on a Docker-enabled host.
+- Implement login, JWT access/refresh tokens, and RBAC enforcement.

@@ -6,6 +6,16 @@ export interface HealthState {
   timestamp: string;
 }
 
+export interface RequestContext {
+  userId: string;
+  tenantId: string | null;
+  roles: string[];
+  permissions: string[];
+  isPlatformAdmin: boolean;
+  requestId: string;
+  platformAccessReason?: string;
+}
+
 export function createHealthState(service: string): HealthState {
   return { service, status: "ok", timestamp: new Date().toISOString() };
 }
@@ -21,4 +31,3 @@ export function startHealthServer(service: string, port: number): Server {
     response.end(JSON.stringify(createHealthState(service)));
   }).listen(port, "0.0.0.0");
 }
-
