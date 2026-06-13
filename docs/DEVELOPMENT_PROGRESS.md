@@ -17,6 +17,8 @@ Milestone 2: Multi-tenancy and permissions.
 - Added shared request context and mandatory tenant/platform access guards.
 - Added password-based login and JWT access token issuance.
 - Added hashed, rotating, revocable refresh tokens and logout.
+- Added default JWT authentication guard and server-side permission guard.
+- Added explicit public and required-permission route decorators.
 
 ## Database changes
 
@@ -52,4 +54,4 @@ Milestone 2: Multi-tenancy and permissions.
 
 ## Next task
 
-- Implement JWT request authentication and RBAC enforcement.
+- Add tenant, user, role, permission, subscription, and audit services and APIs.

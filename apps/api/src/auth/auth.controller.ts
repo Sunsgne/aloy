@@ -1,6 +1,7 @@
 import { Body, Controller, Post } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { AuthService } from "./auth.service";
+import { Public } from "./auth.decorators";
 
 interface LoginBody {
   tenantSlug?: string;
@@ -13,6 +14,7 @@ interface RefreshBody {
 }
 
 @ApiTags("auth")
+@Public()
 @Controller("api/v1/auth")
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
