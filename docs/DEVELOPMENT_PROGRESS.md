@@ -31,6 +31,9 @@ Milestone 2: Multi-tenancy and permissions.
 - Added tenant-scoped API token creation, safe listing, revocation, and audit
   events; plaintext secrets are returned only at creation and stored as hashes.
 - Added an idempotent `db:seed` command for the Milestone 2 permission catalog.
+- Replaced the web placeholder with a responsive Milestone 2 administration
+  console covering overview, tenants, users and roles, subscriptions, API
+  tokens, audit events, and service health.
 
 ## Database changes
 
@@ -77,4 +80,4 @@ Milestone 2: Multi-tenancy and permissions.
 
 ## Next task
 
-- Add Milestone 2 admin pages.
+- Begin Milestone 3 device inventory and RouterOS initialization workflows.
