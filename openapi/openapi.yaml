@@ -107,3 +107,41 @@ paths:
       responses:
         "200":
           description: Tenant user disabled, tokens revoked, and change audited.
+  /api/v1/iam/permissions:
+    get:
+      operationId: listPermissions
+      responses:
+        "200":
+          description: Platform permission catalog.
+  /api/v1/iam/roles:
+    get:
+      operationId: listRoles
+      responses:
+        "200":
+          description: Current tenant roles.
+    post:
+      operationId: createRole
+      responses:
+        "201":
+          description: Tenant role created and audited.
+  /api/v1/iam/roles/{id}:
+    patch:
+      operationId: updateRole
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Tenant role updated and audited.
+    delete:
+      operationId: deleteRole
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Tenant role soft deleted and audited.

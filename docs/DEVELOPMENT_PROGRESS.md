@@ -23,6 +23,9 @@ Milestone 2: Multi-tenancy and permissions.
   access reasons, soft deletion, and transactional audit events.
 - Added tenant-scoped user management with password hashing, same-tenant role
   assignment, token revocation, soft deletion, and audit events.
+- Added tenant-scoped role management and a platform permission catalog, with
+  validated permission assignment and audit events.
+- Filtered soft-deleted roles from newly issued access tokens.
 
 ## Database changes
 
@@ -42,6 +45,9 @@ Milestone 2: Multi-tenancy and permissions.
 - Added `GET/PATCH/DELETE /api/v1/tenants/:id`.
 - Added `GET/POST /api/v1/users`.
 - Added `PATCH/DELETE /api/v1/users/:id`.
+- Added `GET /api/v1/iam/permissions`.
+- Added `GET/POST /api/v1/iam/roles`.
+- Added `PATCH/DELETE /api/v1/iam/roles/:id`.
 
 ## Known issues
 
@@ -62,4 +68,4 @@ Milestone 2: Multi-tenancy and permissions.
 
 ## Next task
 
-- Add role, permission, subscription, and audit query services and APIs.
+- Add subscription quota and audit query services and APIs.

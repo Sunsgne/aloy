@@ -37,6 +37,7 @@ export class AuthService {
       },
       include: {
         userRoles: {
+          where: { role: { deletedAt: null } },
           include: {
             role: { include: { permissions: { include: { permission: true } } } },
           },
@@ -58,6 +59,7 @@ export class AuthService {
         user: {
           include: {
             userRoles: {
+              where: { role: { deletedAt: null } },
               include: {
                 role: { include: { permissions: { include: { permission: true } } } },
               },
