@@ -9,6 +9,11 @@ import {
 } from "@aloy/routeros-adapter";
 import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
+import {
+  deriveDeviceFingerprint,
+  inferCertificationStatus,
+  type DevicePlatformType,
+} from "./device-identity";
 
 type OnboardingMode = "CLEAN_BOOTSTRAP" | "ADOPT_EXISTING" | "MONITORING_ONLY" | "POP_NODE";
 type StepStatus = "RUNNING" | "SUCCEEDED" | "FAILED";
@@ -90,6 +95,30 @@ export class DeviceService {
       where: { tenantId, deletedAt: null },
       include: { site: { select: { id: true, name: true, code: true } } },
       orderBy: { createdAt: "desc" },
+    });
+  }
+
+  async getDeviceIdentity(context: RequestContext, id: string) {
+    const { tenantId } = requireTenantScope(context);
+    const device = await prisma.device.findFirst({
+      where: { id, tenantId, deletedAt: null },
+      include: { identity: true, packages: true },
+    });
+    if (!device) {
+      throw new NotFoundException("Device not found");
+    }
+    return device;
+  }
+
+  async getDeviceCapabilities(context: RequestContext, id: string) {
+    const { tenantId } = requireTenantScope(context);
+    const device = await prisma.device.findFirst({ where: { id, tenantId, deletedAt: null } });
+    if (!device) {
+      throw new NotFoundException("Device not found");
+    }
+    return prisma.deviceCapability.findMany({
+      where: { deviceId: id, tenantId, deletedAt: null },
+      orderBy: { key: "asc" },
     });
   }
 
@@ -335,34 +364,14 @@ export class DeviceService {
       stepStatus?: StepStatus;
     },
   ) {
-    const deviceSecret = this.extractBearer(authorization, "Device token");
-    const timestamp = new Date(input.timestamp);
-    if (
-      !Number.isInteger(input.sequence) ||
-      input.sequence < 1 ||
-      Number.isNaN(timestamp.valueOf()) ||
-      Math.abs(Date.now() - timestamp.valueOf()) > 5 * 60_000
-    ) {
-      throw new UnauthorizedException("Invalid or stale heartbeat");
-    }
     return prisma.$transaction(async (transaction) => {
-      const credential = await transaction.deviceCredential.findUnique({
-        where: { secretHash: this.hashSecret(deviceSecret) },
-      });
-      if (
-        !credential ||
-        credential.revokedAt ||
-        (credential.expiresAt && credential.expiresAt <= new Date())
-      ) {
-        throw new UnauthorizedException("Invalid device token");
-      }
-      const advanced = await transaction.deviceCredential.updateMany({
-        where: { id: credential.id, lastSequence: { lt: input.sequence }, revokedAt: null },
-        data: { lastSequence: input.sequence, lastUsedAt: new Date(), updatedBy: "device-heartbeat" },
-      });
-      if (advanced.count !== 1) {
-        throw new UnauthorizedException("Heartbeat sequence was already accepted");
-      }
+      const credential = await this.authorizeDeviceReport(
+        transaction,
+        authorization,
+        input.sequence,
+        input.timestamp,
+        "device-heartbeat",
+      );
       await transaction.device.update({
         where: { id: credential.deviceId },
         data: {
@@ -396,6 +405,153 @@ export class DeviceService {
       return {
         acceptedSequence: input.sequence,
         nextHeartbeatIntervalSeconds: 60,
+        serverTime: new Date().toISOString(),
+      };
+    });
+  }
+
+  reportDiscovery(
+    authorization: string | undefined,
+    input: {
+      sequence: number;
+      timestamp: string;
+      identity: {
+        platformType: DevicePlatformType;
+        identity?: string;
+        boardName?: string;
+        serialNumber?: string;
+        softwareId?: string;
+        systemId?: string;
+        model?: string;
+        revision?: string;
+        architectureName?: string;
+        cpu?: string;
+        cpuCount?: number;
+        cpuFrequencyMhz?: number;
+        totalMemoryBytes?: number;
+        totalStorageBytes?: number;
+        routerOsVersion?: string;
+        buildTime?: string;
+        factorySoftware?: string;
+        licenseLevel?: string;
+        currentFirmware?: string;
+        upgradeFirmware?: string;
+        deviceMode?: string;
+        deviceModeFlagged?: boolean;
+        deviceModeFeatures?: string[];
+      };
+      packages?: Array<{ name: string; version: string; disabled?: boolean; scheduled?: boolean }>;
+      capabilities?: Array<{
+        key: string;
+        status: "SUPPORTED" | "SUPPORTED_WITH_LIMITS" | "UNSUPPORTED" | "DISABLED_BY_PACKAGE" | "DISABLED_BY_DEVICE_MODE" | "UNSUPPORTED_VERSION" | "UNSUPPORTED_PLATFORM" | "UNKNOWN";
+        reason?: string;
+      }>;
+    },
+  ) {
+    if (!input.identity || (input.packages?.length ?? 0) > 500 || (input.capabilities?.length ?? 0) > 500) {
+      throw new BadRequestException("Valid identity and at most 500 packages and capabilities are required");
+    }
+    const fingerprint = deriveDeviceFingerprint(input.identity);
+    return prisma.$transaction(async (transaction) => {
+      const credential = await this.authorizeDeviceReport(
+        transaction,
+        authorization,
+        input.sequence,
+        input.timestamp,
+        "device-discovery",
+      );
+      const duplicate = fingerprint
+        ? await transaction.deviceIdentity.findFirst({
+            where: { fingerprint, deviceId: { not: credential.deviceId }, deletedAt: null },
+          })
+        : null;
+      const certificationStatus: "QUARANTINED" | ReturnType<typeof inferCertificationStatus> = duplicate
+        ? "QUARANTINED"
+        : inferCertificationStatus(input.identity.platformType, fingerprint, input.capabilities?.length ?? 0);
+      const identityData = {
+        fingerprint: duplicate ? null : fingerprint,
+        platformType: input.identity.platformType,
+        certificationStatus,
+        identity: input.identity.identity?.trim(),
+        boardName: input.identity.boardName?.trim(),
+        serialNumber: input.identity.serialNumber?.trim(),
+        softwareId: input.identity.softwareId?.trim(),
+        systemId: input.identity.systemId?.trim(),
+        model: input.identity.model?.trim(),
+        revision: input.identity.revision?.trim(),
+        architectureName: input.identity.architectureName?.trim(),
+        cpu: input.identity.cpu?.trim(),
+        cpuCount: input.identity.cpuCount,
+        cpuFrequencyMhz: input.identity.cpuFrequencyMhz,
+        totalMemoryBytes: input.identity.totalMemoryBytes,
+        totalStorageBytes: input.identity.totalStorageBytes,
+        routerOsVersion: input.identity.routerOsVersion?.trim(),
+        buildTime: input.identity.buildTime?.trim(),
+        factorySoftware: input.identity.factorySoftware?.trim(),
+        licenseLevel: input.identity.licenseLevel?.trim(),
+        currentFirmware: input.identity.currentFirmware?.trim(),
+        upgradeFirmware: input.identity.upgradeFirmware?.trim(),
+        deviceMode: input.identity.deviceMode?.trim(),
+        deviceModeFlagged: input.identity.deviceModeFlagged,
+        deviceModeFeatures: input.identity.deviceModeFeatures ?? [],
+        lastReportedAt: new Date(),
+        updatedBy: "device-discovery",
+      };
+      const identity = await transaction.deviceIdentity.upsert({
+        where: { deviceId: credential.deviceId },
+        update: identityData,
+        create: {
+          tenantId: credential.tenantId,
+          deviceId: credential.deviceId,
+          ...identityData,
+          createdBy: "device-discovery",
+        },
+      });
+      await transaction.devicePackage.deleteMany({ where: { deviceId: credential.deviceId } });
+      await transaction.deviceCapability.deleteMany({ where: { deviceId: credential.deviceId } });
+      if (input.packages?.length) {
+        await transaction.devicePackage.createMany({
+          data: input.packages.map((item) => ({
+            tenantId: credential.tenantId,
+            deviceId: credential.deviceId,
+            name: item.name.trim(),
+            version: item.version.trim(),
+            disabled: item.disabled ?? false,
+            scheduled: item.scheduled ?? false,
+            createdBy: "device-discovery",
+            updatedBy: "device-discovery",
+          })),
+        });
+      }
+      if (input.capabilities?.length) {
+        await transaction.deviceCapability.createMany({
+          data: input.capabilities.map((item) => ({
+            tenantId: credential.tenantId,
+            deviceId: credential.deviceId,
+            key: item.key.trim(),
+            status: item.status,
+            reason: item.reason?.trim(),
+            createdBy: "device-discovery",
+            updatedBy: "device-discovery",
+          })),
+        });
+      }
+      await transaction.device.update({
+        where: { id: credential.deviceId },
+        data: {
+          serialNumber: input.identity.serialNumber?.trim(),
+          model: input.identity.model?.trim() || input.identity.boardName?.trim(),
+          routerOsVersion: input.identity.routerOsVersion?.trim(),
+          status: duplicate ? "ERROR" : "ONLINE",
+          lastSeenAt: new Date(),
+          updatedBy: "device-discovery",
+        },
+      });
+      return {
+        identity,
+        duplicateFingerprint: Boolean(duplicate),
+        packageCount: input.packages?.length ?? 0,
+        capabilityCount: input.capabilities?.length ?? 0,
         serverTime: new Date().toISOString(),
       };
     });
@@ -547,5 +703,43 @@ export class DeviceService {
 
   private hashSecret(secret: string) {
     return createHash("sha256").update(secret).digest("hex");
+  }
+
+  private async authorizeDeviceReport(
+    transaction: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
+    authorization: string | undefined,
+    sequence: number,
+    timestampValue: string,
+    actor: string,
+  ) {
+    const deviceSecret = this.extractBearer(authorization, "Device token");
+    const timestamp = new Date(timestampValue);
+    if (
+      !Number.isInteger(sequence) ||
+      sequence < 1 ||
+      Number.isNaN(timestamp.valueOf()) ||
+      Math.abs(Date.now() - timestamp.valueOf()) > 5 * 60_000
+    ) {
+      throw new UnauthorizedException("Invalid or stale device report");
+    }
+    const credential = await transaction.deviceCredential.findUnique({
+      where: { secretHash: this.hashSecret(deviceSecret) },
+    });
+    if (
+      !credential ||
+      credential.revokedAt ||
+      credential.deletedAt ||
+      (credential.expiresAt && credential.expiresAt <= new Date())
+    ) {
+      throw new UnauthorizedException("Invalid device token");
+    }
+    const advanced = await transaction.deviceCredential.updateMany({
+      where: { id: credential.id, lastSequence: { lt: sequence }, revokedAt: null, deletedAt: null },
+      data: { lastSequence: sequence, lastUsedAt: new Date(), updatedBy: actor },
+    });
+    if (advanced.count !== 1) {
+      throw new UnauthorizedException("Device report sequence was already accepted");
+    }
+    return credential;
   }
 }

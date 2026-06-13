@@ -33,6 +33,18 @@ export class DeviceController {
     return this.deviceService.listDevices(context);
   }
 
+  @Get("devices/:id/identity")
+  @RequirePermissions("device.read")
+  getDeviceIdentity(@CurrentRequestContext() context: RequestContext, @Param("id") id: string) {
+    return this.deviceService.getDeviceIdentity(context, id);
+  }
+
+  @Get("devices/:id/capabilities")
+  @RequirePermissions("device.read")
+  getDeviceCapabilities(@CurrentRequestContext() context: RequestContext, @Param("id") id: string) {
+    return this.deviceService.getDeviceCapabilities(context, id);
+  }
+
   @Post("devices")
   @RequirePermissions("device.write")
   createDevice(

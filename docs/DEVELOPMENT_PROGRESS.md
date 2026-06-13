@@ -56,6 +56,12 @@ Milestone 3: Device inventory and RouterOS initialization.
 - Added a polished initialization wizard with mode selection, HTTPS controller
   setup, masked bootstrap script preview, device detail drawer, and a visual
   Existing Config safety report.
+- Added authenticated device discovery reports for platform identity, stable
+  fingerprinting, RouterOS packages, Device Mode, and real-time capabilities.
+- Device fingerprints follow serial number, Software ID, and System ID
+  priorities and never use IP addresses or editable RouterOS identity names.
+- Duplicate fingerprints are quarantined and unknown platforms remain
+  partially certified rather than receiving unsafe full certification.
 
 ## Database changes
 
@@ -91,6 +97,9 @@ Milestone 3: Device inventory and RouterOS initialization.
 - Added `GET /api/v1/onboarding-sessions/:id`.
 - Added `POST /api/v1/onboarding-sessions/:id/management-wireguard-plan`.
 - Added `POST /api/v1/onboarding-sessions/:id/adoption-preview`.
+- Added `GET /api/v1/devices/:id/identity`.
+- Added `GET /api/v1/devices/:id/capabilities`.
+- Added `POST /api/v1/device-reports/discovery`.
 - Added `GET /api/v1/onboarding-sessions`.
 
 ## Known issues
@@ -112,4 +121,4 @@ Milestone 3: Device inventory and RouterOS initialization.
 
 ## Next task
 
-- Add device identity, package, Device Mode, and capability discovery.
+- Add interface discovery with stable interface fingerprints and SFP metadata.

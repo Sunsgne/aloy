@@ -207,6 +207,18 @@ paths:
       responses:
         "201":
           description: Pending RouterOS device created and audited.
+  /api/v1/devices/{id}/identity:
+    get:
+      operationId: getDeviceIdentity
+      responses:
+        "200":
+          description: Device identity, platform, packages, Device Mode, and certification state.
+  /api/v1/devices/{id}/capabilities:
+    get:
+      operationId: getDeviceCapabilities
+      responses:
+        "200":
+          description: Current real-time device capability observations.
   /api/v1/devices/{id}/bootstrap-tokens:
     post:
       operationId: issueBootstrapToken
@@ -251,6 +263,14 @@ paths:
       responses:
         "201":
           description: Authenticated device heartbeat and optional onboarding progress accepted.
+        "401":
+          description: Invalid device credential, timestamp, or replayed sequence.
+  /api/v1/device-reports/discovery:
+    post:
+      operationId: reportDeviceDiscovery
+      responses:
+        "201":
+          description: Authenticated identity, package, Device Mode, and capability snapshot accepted.
         "401":
           description: Invalid device credential, timestamp, or replayed sequence.
   /api/v1/onboarding-sessions:
