@@ -15,17 +15,23 @@ Milestone 2: Multi-tenancy and permissions.
 - Added identity and tenant Prisma models for Tenant, User, Role, Permission,
   Subscription, API tokens, and audit events.
 - Added shared request context and mandatory tenant/platform access guards.
+- Added password-based login and JWT access token issuance.
+- Added hashed, rotating, revocable refresh tokens and logout.
 
 ## Database changes
 
 - Added initial Prisma schema with `PlatformSetting`.
 - Added Milestone 2 identity, tenant, RBAC, subscription, API token, and audit
   entities.
+- Added `RefreshToken` persistence with expiry and revocation state.
 
 ## API changes
 
 - Added `GET /health`.
 - Added Swagger UI at `/docs`.
+- Added `POST /api/v1/auth/login`.
+- Added `POST /api/v1/auth/refresh`.
+- Added `POST /api/v1/auth/logout`.
 
 ## Known issues
 
@@ -46,4 +52,4 @@ Milestone 2: Multi-tenancy and permissions.
 
 ## Next task
 
-- Implement login, JWT access/refresh tokens, and RBAC enforcement.
+- Implement JWT request authentication and RBAC enforcement.

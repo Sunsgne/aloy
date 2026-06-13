@@ -1,8 +1,7 @@
 import { describe, expect, it } from "vitest";
-import type { RequestContext } from "@aloy/shared";
 import { requirePlatformAccess, requireTenantScope } from "./tenant-scope.js";
 
-const tenantContext: RequestContext = {
+const tenantContext = {
   userId: "user-1",
   tenantId: "tenant-1",
   roles: [],

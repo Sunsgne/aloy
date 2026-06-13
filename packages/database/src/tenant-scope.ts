@@ -1,4 +1,8 @@
-import type { RequestContext } from "@aloy/shared";
+interface RequestContext {
+  tenantId: string | null;
+  isPlatformAdmin: boolean;
+  platformAccessReason?: string;
+}
 
 export interface TenantScope {
   tenantId: string;

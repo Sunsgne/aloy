@@ -59,6 +59,7 @@ model User {
   displayName  String
   status       UserStatus @default(ACTIVE)
   userRoles    UserRole[]
+  refreshTokens RefreshToken[]
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
   createdBy    String
@@ -67,6 +68,18 @@ model User {
 
   @@unique([tenantId, email])
   @@index([tenantId])
+}
+
+model RefreshToken {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash  String   @unique
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
 }
 
 model Role {
