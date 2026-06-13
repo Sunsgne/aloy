@@ -21,6 +21,8 @@ Milestone 2: Multi-tenancy and permissions.
 - Added explicit public and required-permission route decorators.
 - Added platform tenant management APIs with permission checks, cross-tenant
   access reasons, soft deletion, and transactional audit events.
+- Added tenant-scoped user management with password hashing, same-tenant role
+  assignment, token revocation, soft deletion, and audit events.
 
 ## Database changes
 
@@ -38,6 +40,8 @@ Milestone 2: Multi-tenancy and permissions.
 - Added `POST /api/v1/auth/logout`.
 - Added `GET/POST /api/v1/tenants`.
 - Added `GET/PATCH/DELETE /api/v1/tenants/:id`.
+- Added `GET/POST /api/v1/users`.
+- Added `PATCH/DELETE /api/v1/users/:id`.
 
 ## Known issues
 
@@ -58,4 +62,4 @@ Milestone 2: Multi-tenancy and permissions.
 
 ## Next task
 
-- Add user, role, permission, subscription, and audit query services and APIs.
+- Add role, permission, subscription, and audit query services and APIs.

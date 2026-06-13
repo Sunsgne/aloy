@@ -75,3 +75,35 @@ paths:
       responses:
         "200":
           description: Tenant soft deleted and audited.
+  /api/v1/users:
+    get:
+      operationId: listUsers
+      responses:
+        "200":
+          description: Current tenant users without password hashes.
+    post:
+      operationId: createUser
+      responses:
+        "201":
+          description: Tenant user created and audited.
+  /api/v1/users/{id}:
+    patch:
+      operationId: updateUser
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Tenant user updated and audited.
+    delete:
+      operationId: deleteUser
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Tenant user disabled, tokens revoked, and change audited.
