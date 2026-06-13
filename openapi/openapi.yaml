@@ -163,3 +163,25 @@ paths:
       responses:
         "200":
           description: Tenant-scoped audit events.
+  /api/v1/api-tokens:
+    get:
+      operationId: listApiTokens
+      responses:
+        "200":
+          description: Current tenant API tokens without secrets or hashes.
+    post:
+      operationId: createApiToken
+      responses:
+        "201":
+          description: API token created and its plaintext secret returned once.
+  /api/v1/api-tokens/{id}:
+    delete:
+      operationId: revokeApiToken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: API token revoked and change audited.

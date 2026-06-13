@@ -16,6 +16,7 @@ cp .env.example .env
 pnpm install
 pnpm db:generate
 docker compose up -d
+pnpm db:seed
 pnpm dev
 ```
 
@@ -32,4 +33,3 @@ pnpm test
 pnpm build
 docker compose config
 ```
-

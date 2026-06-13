@@ -6,9 +6,10 @@ import { TenantModule } from "./tenant/tenant.module";
 import { UserModule } from "./user/user.module";
 import { IamModule } from "./iam/iam.module";
 import { GovernanceModule } from "./governance/governance.module";
+import { ApiTokenModule } from "./api-token/api-token.module";
 
 @Module({
-  imports: [AuthModule, TenantModule, UserModule, IamModule, GovernanceModule],
+  imports: [AuthModule, TenantModule, UserModule, IamModule, GovernanceModule, ApiTokenModule],
   controllers: [HealthController],
   providers: [HealthService],
 })

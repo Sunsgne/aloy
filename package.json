@@ -13,7 +13,8 @@
     "test": "turbo test",
     "typecheck": "turbo typecheck",
     "format": "prettier --write .",
-    "db:generate": "prisma generate --schema prisma/schema.prisma"
+    "db:generate": "prisma generate --schema prisma/schema.prisma",
+    "db:seed": "node prisma/seed.mjs"
   },
   "devDependencies": {
     "@prisma/client": "6.9.0",

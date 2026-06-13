@@ -28,6 +28,9 @@ Milestone 2: Multi-tenancy and permissions.
 - Filtered soft-deleted roles from newly issued access tokens.
 - Added subscription quota creation/current-plan lookup and tenant-scoped audit
   event queries, including explicit platform cross-tenant access reasons.
+- Added tenant-scoped API token creation, safe listing, revocation, and audit
+  events; plaintext secrets are returned only at creation and stored as hashes.
+- Added an idempotent `db:seed` command for the Milestone 2 permission catalog.
 
 ## Database changes
 
@@ -52,6 +55,8 @@ Milestone 2: Multi-tenancy and permissions.
 - Added `PATCH/DELETE /api/v1/iam/roles/:id`.
 - Added `GET /api/v1/subscription` and `POST /api/v1/subscriptions`.
 - Added `GET /api/v1/audit-events`.
+- Added `GET/POST /api/v1/api-tokens`.
+- Added `DELETE /api/v1/api-tokens/:id`.
 
 ## Known issues
 
@@ -72,4 +77,4 @@ Milestone 2: Multi-tenancy and permissions.
 
 ## Next task
 
-- Add API token management, permission bootstrap data, and Milestone 2 admin pages.
+- Add Milestone 2 admin pages.
