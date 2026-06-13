@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-Milestone 2: Multi-tenancy and permissions.
+Milestone 3: Device inventory and RouterOS initialization.
 
 ## Completed
 
@@ -34,6 +34,13 @@ Milestone 2: Multi-tenancy and permissions.
 - Replaced the web placeholder with a responsive Milestone 2 administration
   console covering overview, tenants, users and roles, subscriptions, API
   tokens, audit events, and service health.
+- Added tenant-scoped Site, Device, BootstrapToken, OnboardingSession, and
+  OnboardingStep models.
+- Added site and device inventory APIs plus one-time bootstrap token issuance
+  for CLEAN_BOOTSTRAP, ADOPT_EXISTING, MONITORING_ONLY, and POP_NODE modes.
+- Added device inventory and RouterOS initialization center pages, alongside
+  a visual-quality pass for navigation contrast, status surfaces, cards, and
+  workflow presentation.
 
 ## Database changes
 
@@ -60,6 +67,10 @@ Milestone 2: Multi-tenancy and permissions.
 - Added `GET /api/v1/audit-events`.
 - Added `GET/POST /api/v1/api-tokens`.
 - Added `DELETE /api/v1/api-tokens/:id`.
+- Added `GET/POST /api/v1/sites`.
+- Added `GET/POST /api/v1/devices`.
+- Added `POST /api/v1/devices/:id/bootstrap-tokens`.
+- Added `GET /api/v1/onboarding-sessions`.
 
 ## Known issues
 
@@ -80,4 +91,5 @@ Milestone 2: Multi-tenancy and permissions.
 
 ## Next task
 
-- Begin Milestone 3 device inventory and RouterOS initialization workflows.
+- Add RouterOS bootstrap script generation, device registration, and heartbeat
+  ingestion.

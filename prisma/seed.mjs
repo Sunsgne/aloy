@@ -14,6 +14,12 @@ const permissions = [
   ["audit.read", "View tenant audit events"],
   ["api-token.read", "View API token metadata"],
   ["api-token.write", "Create and revoke API tokens"],
+  ["site.read", "View sites in the current tenant"],
+  ["site.write", "Create and update sites in the current tenant"],
+  ["device.read", "View devices and onboarding state"],
+  ["device.write", "Create and update devices"],
+  ["onboarding.read", "View RouterOS onboarding sessions"],
+  ["onboarding.write", "Issue bootstrap tokens and manage onboarding"],
 ];
 
 try {

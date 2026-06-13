@@ -185,3 +185,42 @@ paths:
       responses:
         "200":
           description: API token revoked and change audited.
+  /api/v1/sites:
+    get:
+      operationId: listSites
+      responses:
+        "200":
+          description: Current tenant sites and device counts.
+    post:
+      operationId: createSite
+      responses:
+        "201":
+          description: Site created and audited.
+  /api/v1/devices:
+    get:
+      operationId: listDevices
+      responses:
+        "200":
+          description: Current tenant RouterOS device inventory.
+    post:
+      operationId: createDevice
+      responses:
+        "201":
+          description: Pending RouterOS device created and audited.
+  /api/v1/devices/{id}/bootstrap-tokens:
+    post:
+      operationId: issueBootstrapToken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "201":
+          description: One-time bootstrap token and onboarding session created.
+  /api/v1/onboarding-sessions:
+    get:
+      operationId: listOnboardingSessions
+      responses:
+        "200":
+          description: Current tenant RouterOS onboarding sessions and steps.
