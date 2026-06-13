@@ -1,5 +1,5 @@
 import type { RequestContext } from "@aloy/shared";
-import { Body, Controller, Get, Param, Post } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, Query } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { RequirePermissions } from "../auth/auth.decorators";
 import { CurrentRequestContext } from "../auth/request-context.decorator";
@@ -50,6 +50,22 @@ export class DeviceController {
     @Body() body: { mode: OnboardingMode; expiresInMinutes?: number },
   ) {
     return this.deviceService.issueBootstrapToken(context, id, body);
+  }
+
+  @Get("devices/:id/bootstrap-script")
+  @RequirePermissions("onboarding.write")
+  getBootstrapScript(
+    @CurrentRequestContext() context: RequestContext,
+    @Param("id") id: string,
+    @Query("mode") mode: OnboardingMode,
+    @Query("apiBaseUrl") apiBaseUrl: string,
+    @Query("expiresInMinutes") expiresInMinutes?: string,
+  ) {
+    return this.deviceService.getBootstrapScript(context, id, {
+      mode,
+      apiBaseUrl,
+      expiresInMinutes: expiresInMinutes ? Number(expiresInMinutes) : undefined,
+    });
   }
 
   @Get("onboarding-sessions")

@@ -47,6 +47,9 @@ importers:
       '@aloy/database':
         specifier: workspace:*
         version: link:../../packages/database
+      '@aloy/routeros-adapter':
+        specifier: workspace:*
+        version: link:../../packages/routeros-adapter
       '@aloy/shared':
         specifier: workspace:*
         version: link:../../packages/shared

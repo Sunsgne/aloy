@@ -76,6 +76,8 @@ model Tenant {
   devices       Device[]
   bootstrapTokens BootstrapToken[]
   onboardingSessions OnboardingSession[]
+  deviceIdentities DeviceIdentity[]
+  deviceCredentials DeviceCredential[]
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   createdBy     String
@@ -119,6 +121,8 @@ model Device {
   lastSeenAt         DateTime?
   bootstrapTokens    BootstrapToken[]
   onboardingSessions OnboardingSession[]
+  identity           DeviceIdentity?
+  credentials        DeviceCredential[]
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
   createdBy          String
@@ -127,6 +131,46 @@ model Device {
 
   @@unique([tenantId, name])
   @@index([tenantId, siteId])
+}
+
+model DeviceIdentity {
+  id               String   @id @default(cuid())
+  tenantId         String
+  tenant           Tenant   @relation(fields: [tenantId], references: [id])
+  deviceId         String   @unique
+  device           Device   @relation(fields: [deviceId], references: [id])
+  identity         String?
+  serialNumber     String?
+  model            String?
+  architectureName String?
+  routerOsVersion  String?
+  lastReportedAt   DateTime @default(now())
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  createdBy        String
+  updatedBy        String
+
+  @@index([tenantId])
+}
+
+model DeviceCredential {
+  id           String   @id @default(cuid())
+  tenantId     String
+  tenant       Tenant   @relation(fields: [tenantId], references: [id])
+  deviceId     String
+  device       Device   @relation(fields: [deviceId], references: [id])
+  label        String
+  secretHash   String   @unique
+  lastSequence Int      @default(0)
+  lastUsedAt   DateTime?
+  expiresAt    DateTime?
+  revokedAt    DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  createdBy    String
+  updatedBy    String
+
+  @@index([tenantId, deviceId])
 }
 
 model BootstrapToken {

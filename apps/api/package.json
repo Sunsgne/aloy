@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@aloy/database": "workspace:*",
+    "@aloy/routeros-adapter": "workspace:*",
     "@aloy/shared": "workspace:*",
     "@nestjs/common": "11.1.3",
     "@nestjs/core": "11.1.3",

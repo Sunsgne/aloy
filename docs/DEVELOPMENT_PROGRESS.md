@@ -41,6 +41,13 @@ Milestone 3: Device inventory and RouterOS initialization.
 - Added device inventory and RouterOS initialization center pages, alongside
   a visual-quality pass for navigation contrast, status surfaces, cards, and
   workflow presentation.
+- Added an HTTPS-only RouterOS bootstrap script generator using `/tool fetch`,
+  JSON serialization, certificate validation, and a one-time token.
+- Added public device registration that atomically consumes bootstrap tokens,
+  validates bound serial numbers, records identity, rotates device credentials,
+  and starts onboarding.
+- Added authenticated device heartbeat ingestion with timestamps, monotonic
+  sequences for replay protection, identity refresh, and onboarding progress.
 
 ## Database changes
 
@@ -70,6 +77,9 @@ Milestone 3: Device inventory and RouterOS initialization.
 - Added `GET/POST /api/v1/sites`.
 - Added `GET/POST /api/v1/devices`.
 - Added `POST /api/v1/devices/:id/bootstrap-tokens`.
+- Added `GET /api/v1/devices/:id/bootstrap-script`.
+- Added `POST /api/v1/device-onboarding/register`.
+- Added `POST /api/v1/device-reports/heartbeat`.
 - Added `GET /api/v1/onboarding-sessions`.
 
 ## Known issues
@@ -91,5 +101,4 @@ Milestone 3: Device inventory and RouterOS initialization.
 
 ## Next task
 
-- Add RouterOS bootstrap script generation, device registration, and heartbeat
-  ingestion.
+- Add management WireGuard planning and Existing Config read-only adoption.

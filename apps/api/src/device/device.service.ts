@@ -1,9 +1,11 @@
 import type { RequestContext } from "@aloy/shared";
 import { prisma, requireTenantScope } from "@aloy/database";
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { createHash, randomBytes } from "node:crypto";
+import { generateBootstrapScript } from "@aloy/routeros-adapter";
+import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 
 type OnboardingMode = "CLEAN_BOOTSTRAP" | "ADOPT_EXISTING" | "MONITORING_ONLY" | "POP_NODE";
+type StepStatus = "RUNNING" | "SUCCEEDED" | "FAILED";
 
 const stepsByMode: Record<OnboardingMode, Array<[string, string]>> = {
   CLEAN_BOOTSTRAP: [
@@ -168,6 +170,231 @@ export class DeviceService {
     });
   }
 
+  async getBootstrapScript(
+    context: RequestContext,
+    deviceId: string,
+    input: { mode: OnboardingMode; apiBaseUrl: string; expiresInMinutes?: number },
+  ) {
+    let apiBaseUrl: URL;
+    try {
+      apiBaseUrl = new URL(input.apiBaseUrl);
+    } catch {
+      throw new BadRequestException("An HTTPS API base URL is required");
+    }
+    if (apiBaseUrl.protocol !== "https:") {
+      throw new BadRequestException("An HTTPS API base URL is required");
+    }
+    const issued = await this.issueBootstrapToken(context, deviceId, input);
+    try {
+      return {
+        script: generateBootstrapScript({
+          apiBaseUrl: input.apiBaseUrl,
+          bootstrapToken: issued.token,
+        }),
+        expiresAt: issued.bootstrapToken.expiresAt,
+        session: issued.session,
+      };
+    } catch (error) {
+      throw new BadRequestException(error instanceof Error ? error.message : "Unable to generate script");
+    }
+  }
+
+  registerDevice(
+    authorization: string | undefined,
+    input: {
+      identity?: string;
+      serialNumber?: string;
+      model?: string;
+      architectureName?: string;
+      routerOsVersion?: string;
+    },
+  ) {
+    const bootstrapSecret = this.extractBearer(authorization, "Bootstrap token");
+    const tokenHash = this.hashSecret(bootstrapSecret);
+    return prisma.$transaction(async (transaction) => {
+      const bootstrapToken = await transaction.bootstrapToken.findUnique({
+        where: { tokenHash },
+        include: { device: true },
+      });
+      if (
+        !bootstrapToken ||
+        bootstrapToken.consumedAt ||
+        bootstrapToken.revokedAt ||
+        bootstrapToken.expiresAt <= new Date()
+      ) {
+        throw new UnauthorizedException("Invalid or expired bootstrap token");
+      }
+      const expectedSerial = bootstrapToken.device.serialNumber?.trim();
+      if (expectedSerial && expectedSerial !== input.serialNumber?.trim()) {
+        throw new UnauthorizedException("Device serial number does not match bootstrap token");
+      }
+      const consumed = await transaction.bootstrapToken.updateMany({
+        where: {
+          id: bootstrapToken.id,
+          consumedAt: null,
+          revokedAt: null,
+          expiresAt: { gt: new Date() },
+        },
+        data: { consumedAt: new Date() },
+      });
+      if (consumed.count !== 1) {
+        throw new UnauthorizedException("Bootstrap token has already been used");
+      }
+
+      const deviceSecret = `aloy_device_${randomBytes(32).toString("base64url")}`;
+      await transaction.deviceCredential.updateMany({
+        where: { deviceId: bootstrapToken.deviceId, revokedAt: null },
+        data: { revokedAt: new Date(), updatedBy: "device-onboarding" },
+      });
+      await transaction.deviceCredential.create({
+        data: {
+          tenantId: bootstrapToken.tenantId,
+          deviceId: bootstrapToken.deviceId,
+          label: "primary-heartbeat",
+          secretHash: this.hashSecret(deviceSecret),
+          createdBy: "device-onboarding",
+          updatedBy: "device-onboarding",
+        },
+      });
+      await transaction.deviceIdentity.upsert({
+        where: { deviceId: bootstrapToken.deviceId },
+        update: {
+          identity: input.identity?.trim(),
+          serialNumber: input.serialNumber?.trim(),
+          model: input.model?.trim(),
+          architectureName: input.architectureName?.trim(),
+          routerOsVersion: input.routerOsVersion?.trim(),
+          lastReportedAt: new Date(),
+          updatedBy: "device-onboarding",
+        },
+        create: {
+          tenantId: bootstrapToken.tenantId,
+          deviceId: bootstrapToken.deviceId,
+          identity: input.identity?.trim(),
+          serialNumber: input.serialNumber?.trim(),
+          model: input.model?.trim(),
+          architectureName: input.architectureName?.trim(),
+          routerOsVersion: input.routerOsVersion?.trim(),
+          createdBy: "device-onboarding",
+          updatedBy: "device-onboarding",
+        },
+      });
+      await transaction.device.update({
+        where: { id: bootstrapToken.deviceId },
+        data: {
+          serialNumber: input.serialNumber?.trim() || bootstrapToken.device.serialNumber,
+          model: input.model?.trim() || bootstrapToken.device.model,
+          routerOsVersion: input.routerOsVersion?.trim(),
+          status: "ONBOARDING",
+          lastSeenAt: new Date(),
+          updatedBy: "device-onboarding",
+        },
+      });
+      const session = await transaction.onboardingSession.findFirst({
+        where: { deviceId: bootstrapToken.deviceId, mode: bootstrapToken.mode, status: "PENDING" },
+        include: { steps: { orderBy: { position: "asc" } } },
+        orderBy: { createdAt: "desc" },
+      });
+      if (session) {
+        await this.updateStep(transaction, session.id, session.steps, "connect", "SUCCEEDED");
+      }
+      await transaction.auditEvent.create({
+        data: {
+          tenantId: bootstrapToken.tenantId,
+          actorUserId: `device:${bootstrapToken.deviceId}`,
+          action: "device.register",
+          resourceType: "Device",
+          resourceId: bootstrapToken.deviceId,
+          requestId: randomUUID(),
+        },
+      });
+      return {
+        deviceId: bootstrapToken.deviceId,
+        deviceToken: deviceSecret,
+        heartbeatIntervalSeconds: 60,
+        serverTime: new Date().toISOString(),
+      };
+    });
+  }
+
+  heartbeatDevice(
+    authorization: string | undefined,
+    input: {
+      sequence: number;
+      timestamp: string;
+      routerOsVersion?: string;
+      managementAddress?: string;
+      sessionId?: string;
+      stepKey?: string;
+      stepStatus?: StepStatus;
+    },
+  ) {
+    const deviceSecret = this.extractBearer(authorization, "Device token");
+    const timestamp = new Date(input.timestamp);
+    if (
+      !Number.isInteger(input.sequence) ||
+      input.sequence < 1 ||
+      Number.isNaN(timestamp.valueOf()) ||
+      Math.abs(Date.now() - timestamp.valueOf()) > 5 * 60_000
+    ) {
+      throw new UnauthorizedException("Invalid or stale heartbeat");
+    }
+    return prisma.$transaction(async (transaction) => {
+      const credential = await transaction.deviceCredential.findUnique({
+        where: { secretHash: this.hashSecret(deviceSecret) },
+      });
+      if (
+        !credential ||
+        credential.revokedAt ||
+        (credential.expiresAt && credential.expiresAt <= new Date())
+      ) {
+        throw new UnauthorizedException("Invalid device token");
+      }
+      const advanced = await transaction.deviceCredential.updateMany({
+        where: { id: credential.id, lastSequence: { lt: input.sequence }, revokedAt: null },
+        data: { lastSequence: input.sequence, lastUsedAt: new Date(), updatedBy: "device-heartbeat" },
+      });
+      if (advanced.count !== 1) {
+        throw new UnauthorizedException("Heartbeat sequence was already accepted");
+      }
+      await transaction.device.update({
+        where: { id: credential.deviceId },
+        data: {
+          lastSeenAt: new Date(),
+          managementAddress: input.managementAddress?.trim(),
+          routerOsVersion: input.routerOsVersion?.trim(),
+          status: input.stepStatus === "FAILED" ? "ERROR" : "ONLINE",
+          updatedBy: "device-heartbeat",
+        },
+      });
+      if (input.routerOsVersion) {
+        await transaction.deviceIdentity.updateMany({
+          where: { deviceId: credential.deviceId },
+          data: {
+            routerOsVersion: input.routerOsVersion.trim(),
+            lastReportedAt: new Date(),
+            updatedBy: "device-heartbeat",
+          },
+        });
+      }
+      if (input.sessionId && input.stepKey && input.stepStatus) {
+        const session = await transaction.onboardingSession.findFirst({
+          where: { id: input.sessionId, deviceId: credential.deviceId, tenantId: credential.tenantId },
+          include: { steps: { orderBy: { position: "asc" } } },
+        });
+        if (!session) {
+          throw new NotFoundException("Onboarding session not found");
+        }
+        await this.updateStep(transaction, session.id, session.steps, input.stepKey, input.stepStatus);
+      }
+      return {
+        acceptedSequence: input.sequence,
+        nextHeartbeatIntervalSeconds: 60,
+        serverTime: new Date().toISOString(),
+      };
+    });
+  }
+
   listOnboardingSessions(context: RequestContext) {
     const { tenantId } = requireTenantScope(context);
     return prisma.onboardingSession.findMany({
@@ -191,5 +418,62 @@ export class DeviceService {
     return transaction.auditEvent.create({
       data: { tenantId, actorUserId: context.userId, action, resourceType, resourceId, requestId: context.requestId },
     });
+  }
+
+  private async updateStep(
+    transaction: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
+    sessionId: string,
+    steps: Array<{ id: string; key: string; position: number; status: string }>,
+    stepKey: string,
+    status: StepStatus,
+  ) {
+    const step = steps.find((candidate) => candidate.key === stepKey);
+    if (!step) {
+      throw new NotFoundException("Onboarding step not found");
+    }
+    const now = new Date();
+    await transaction.onboardingStep.update({
+      where: { id: step.id },
+      data: {
+        status,
+        startedAt: step.status === "PENDING" ? now : undefined,
+        endedAt: status === "RUNNING" ? undefined : now,
+      },
+    });
+    const completed = steps.filter(
+      (candidate) => candidate.status === "SUCCEEDED" || candidate.id === step.id && status === "SUCCEEDED",
+    ).length;
+    const next = status === "SUCCEEDED"
+      ? steps.find((candidate) => candidate.position > step.position && candidate.status === "PENDING")
+      : undefined;
+    if (next) {
+      await transaction.onboardingStep.update({
+        where: { id: next.id },
+        data: { status: "RUNNING", startedAt: now },
+      });
+    }
+    const sessionStatus = status === "FAILED" ? "FAILED" : completed === steps.length ? "SUCCEEDED" : "RUNNING";
+    await transaction.onboardingSession.update({
+      where: { id: sessionId },
+      data: {
+        status: sessionStatus,
+        currentStep: next?.key ?? step.key,
+        progress: Math.round(completed / steps.length * 100),
+        startedAt: now,
+        completedAt: sessionStatus === "SUCCEEDED" || sessionStatus === "FAILED" ? now : undefined,
+      },
+    });
+  }
+
+  private extractBearer(authorization: string | undefined, label: string) {
+    const [scheme, secret] = authorization?.split(" ") ?? [];
+    if (scheme !== "Bearer" || !secret) {
+      throw new UnauthorizedException(`${label} is required`);
+    }
+    return secret;
+  }
+
+  private hashSecret(secret: string) {
+    return createHash("sha256").update(secret).digest("hex");
   }
 }

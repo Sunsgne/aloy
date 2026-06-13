@@ -218,6 +218,41 @@ paths:
       responses:
         "201":
           description: One-time bootstrap token and onboarding session created.
+  /api/v1/devices/{id}/bootstrap-script:
+    get:
+      operationId: getBootstrapScript
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+        - in: query
+          name: mode
+          required: true
+          schema: { type: string }
+        - in: query
+          name: apiBaseUrl
+          required: true
+          schema: { type: string, format: uri }
+      responses:
+        "200":
+          description: Minimal HTTPS RouterOS bootstrap script with a one-time token.
+  /api/v1/device-onboarding/register:
+    post:
+      operationId: registerDevice
+      responses:
+        "201":
+          description: Bootstrap token consumed and device credential returned once.
+        "401":
+          description: Invalid, expired, reused, or serial-mismatched bootstrap token.
+  /api/v1/device-reports/heartbeat:
+    post:
+      operationId: reportDeviceHeartbeat
+      responses:
+        "201":
+          description: Authenticated device heartbeat and optional onboarding progress accepted.
+        "401":
+          description: Invalid device credential, timestamp, or replayed sequence.
   /api/v1/onboarding-sessions:
     get:
       operationId: listOnboardingSessions
