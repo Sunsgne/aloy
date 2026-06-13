@@ -1,14 +1,20 @@
 "use client";
 
 import {
+  Alert,
   Avatar,
   Badge,
   Button,
   Card,
   Col,
+  Descriptions,
+  Drawer,
+  Input,
   Layout,
   Menu,
+  Modal,
   Progress,
+  Radio,
   Row,
   Space,
   Steps,
@@ -161,6 +167,7 @@ function Tenants() {
 }
 
 function Devices() {
+  const [selectedDevice, setSelectedDevice] = useState<(typeof devices)[number] | null>(null);
   return (
     <>
       <div className="hero-header device-hero">
@@ -186,14 +193,53 @@ function Devices() {
           { title: "RouterOS", dataIndex: "version", render: (value) => <Typography.Text code>{value}</Typography.Text> },
           { title: "管理地址", dataIndex: "address", render: (value) => <Typography.Text className="mono">{value}</Typography.Text> },
           { title: "状态", dataIndex: "status", render: (value) => <StatusTag status={value} /> },
-          { title: "", render: () => <Button type="link">查看设备</Button> },
+          { title: "", render: (_, row) => <Button type="link" onClick={() => setSelectedDevice(row)}>查看设备</Button> },
         ]} />
       </Card>
+      <Drawer
+        open={Boolean(selectedDevice)}
+        onClose={() => setSelectedDevice(null)}
+        title="设备详情"
+        width={540}
+      >
+        {selectedDevice && (
+          <div className="device-drawer">
+            <div className="device-profile">
+              <span className="device-glyph xl">R</span>
+              <div>
+                <Typography.Title level={3}>{selectedDevice.name}</Typography.Title>
+                <Space><StatusTag status={selectedDevice.status} /><Tag>{selectedDevice.site}</Tag></Space>
+              </div>
+            </div>
+            <Descriptions column={1} className="detail-list" items={[
+              { key: "model", label: "型号", children: selectedDevice.model },
+              { key: "version", label: "RouterOS", children: <Typography.Text code>{selectedDevice.version}</Typography.Text> },
+              { key: "address", label: "管理地址", children: <Typography.Text className="mono">{selectedDevice.address}</Typography.Text> },
+              { key: "heartbeat", label: "最近心跳", children: "24 秒前" },
+              { key: "identity", label: "认证状态", children: <Tag color="blue">IDENTIFIED</Tag> },
+            ]} />
+            <div className="drawer-actions">
+              <Button type="primary" block>打开初始化会话</Button>
+              <Button block>重新发现设备</Button>
+              <Button block>探测设备能力</Button>
+            </div>
+            <Alert
+              type="success"
+              showIcon
+              message="管理通道正常"
+              description="设备凭据已轮换，心跳 Sequence 连续，管理 WireGuard 最近握手正常。"
+            />
+          </div>
+        )}
+      </Drawer>
     </>
   );
 }
 
 function Onboarding() {
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [wizardStep, setWizardStep] = useState(0);
+  const [mode, setMode] = useState("CLEAN_BOOTSTRAP");
   const modeCards = [
     ["CLEAN_BOOTSTRAP", "全新接入", "为新设备建立管理隧道、身份、监控与基础配置。", "blue"],
     ["ADOPT_EXISTING", "接管现网", "先只读分析配置，生成冲突报告后确定接管范围。", "purple"],
@@ -208,7 +254,7 @@ function Onboarding() {
           <Typography.Title level={2}>RouterOS 初始化中心</Typography.Title>
           <Typography.Text>以可审计、可回滚的工作流安全接入设备。</Typography.Text>
         </div>
-        <Button type="primary">开始初始化</Button>
+        <Button type="primary" onClick={() => setWizardOpen(true)}>开始初始化</Button>
       </div>
       <Row gutter={[16, 16]}>
         {modeCards.map(([key, title, detail, tone]) => (
@@ -242,6 +288,86 @@ function Onboarding() {
           </Card>
         </Col>
       </Row>
+      <Card className="adoption-card" title="现网接管安全检查" extra={<Tag color="red">2 个高风险冲突</Tag>}>
+        <Row gutter={[22, 22]}>
+          <Col xs={24} xl={8}>
+            <div className="risk-score"><span>接管风险</span><strong>HIGH</strong><small>默认路由与 BGP 需要人工复核</small></div>
+          </Col>
+          <Col xs={24} xl={16}>
+            <div className="safeguard-grid">
+              {[
+                ["42", "已读取对象"],
+                ["4", "Aloy 可管理对象"],
+                ["38", "受保护现有对象"],
+                ["0", "自动删除对象"],
+              ].map(([value, label]) => <div key={label}><strong>{value}</strong><span>{label}</span></div>)}
+            </div>
+          </Col>
+        </Row>
+        <Alert
+          className="adoption-alert"
+          type="warning"
+          showIcon
+          message="只读接管策略已生效"
+          description="未带 aloy:managed 标记的现有配置全部受保护。平台不会自动删除既有对象。"
+        />
+      </Card>
+      <Modal
+        open={wizardOpen}
+        onCancel={() => { setWizardOpen(false); setWizardStep(0); }}
+        title="创建 RouterOS 初始化会话"
+        width={860}
+        footer={
+          <Space>
+            {wizardStep > 0 && <Button onClick={() => setWizardStep(wizardStep - 1)}>上一步</Button>}
+            {wizardStep < 2
+              ? <Button type="primary" onClick={() => setWizardStep(wizardStep + 1)}>继续</Button>
+              : <Button type="primary" onClick={() => setWizardOpen(false)}>创建并复制脚本</Button>}
+          </Space>
+        }
+      >
+        <Steps className="wizard-steps" current={wizardStep} items={[
+          { title: "选择模式" }, { title: "配置接入" }, { title: "执行脚本" },
+        ]} />
+        {wizardStep === 0 && (
+          <div className="wizard-panel">
+            <Typography.Title level={4}>选择安全接入模式</Typography.Title>
+            <Radio.Group value={mode} onChange={(event) => setMode(event.target.value)} className="mode-radio-grid">
+              {modeCards.map(([key, title, detail]) => (
+                <Radio.Button value={key} key={key}>
+                  <strong>{title}</strong><span>{detail}</span><code>{key}</code>
+                </Radio.Button>
+              ))}
+            </Radio.Group>
+          </div>
+        )}
+        {wizardStep === 1 && (
+          <div className="wizard-panel">
+            <Typography.Title level={4}>配置设备与控制器</Typography.Title>
+            <label className="field-label">目标设备</label>
+            <Input value="HK-POP-01 · 香港 POP" readOnly />
+            <label className="field-label">HTTPS 控制器地址</label>
+            <Input value="https://controller.aloy.example" readOnly />
+            <label className="field-label">初始化模式</label>
+            <Input value={mode} readOnly />
+            <Alert type="info" showIcon message="Bootstrap Token 将绑定租户、设备和序列号，并在注册成功后立即失效。" />
+          </div>
+        )}
+        {wizardStep === 2 && (
+          <div className="wizard-panel">
+            <Typography.Title level={4}>在 RouterOS Terminal 中执行</Typography.Title>
+            <div className="script-toolbar"><Tag color="green">HTTPS + Certificate Validation</Tag><Button size="small">复制脚本</Button></div>
+            <pre className="script-preview">{`:local aloyUrl "https://controller.aloy.example/api/v1/device-onboarding/register";
+:local aloyToken "aloy_bootstrap_••••••••••••••••";
+:local aloyPayload {"identity"=[/system/identity get name]};
+:local aloyJson [:serialize to=json value=$aloyPayload];
+/tool fetch url=$aloyUrl http-method=post check-certificate=yes \\
+  http-header-field=("Authorization: Bearer " . $aloyToken) http-data=$aloyJson;
+:set aloyToken "";`}</pre>
+            <Alert type="warning" showIcon message="脚本和 Token 仅展示一次，请勿写入普通日志或工单。" />
+          </div>
+        )}
+      </Modal>
     </>
   );
 }

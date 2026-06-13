@@ -53,6 +53,9 @@ Milestone 3: Device inventory and RouterOS initialization.
 - Added ADOPT_EXISTING read-only configuration analysis that protects untagged
   objects, identifies high-risk conflicts, and limits takeover scope to
   explicitly Aloy-managed resources.
+- Added a polished initialization wizard with mode selection, HTTPS controller
+  setup, masked bootstrap script preview, device detail drawer, and a visual
+  Existing Config safety report.
 
 ## Database changes
 
