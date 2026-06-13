@@ -145,3 +145,21 @@ paths:
       responses:
         "200":
           description: Tenant role soft deleted and audited.
+  /api/v1/subscription:
+    get:
+      operationId: getCurrentSubscription
+      responses:
+        "200":
+          description: Current tenant active subscription and quotas.
+  /api/v1/subscriptions:
+    post:
+      operationId: createSubscription
+      responses:
+        "201":
+          description: Platform-created subscription and quota record.
+  /api/v1/audit-events:
+    get:
+      operationId: listAuditEvents
+      responses:
+        "200":
+          description: Tenant-scoped audit events.
