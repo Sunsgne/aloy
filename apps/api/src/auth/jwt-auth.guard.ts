@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { RequestContext } from "@aloy/shared";
 import {
   CanActivate,
@@ -10,7 +11,11 @@ import { JwtService } from "@nestjs/jwt";
 import { IS_PUBLIC_KEY } from "./auth.decorators";
 
 interface AuthenticatedRequest {
-  headers: { authorization?: string };
+  headers: {
+    authorization?: string;
+    "x-access-reason"?: string;
+    "x-request-id"?: string;
+  };
   user?: RequestContext;
 }
 
@@ -49,7 +54,8 @@ export class JwtAuthGuard implements CanActivate {
         roles: payload.roles,
         permissions: payload.permissions,
         isPlatformAdmin: payload.tenantId === null,
-        requestId: "",
+        requestId: request.headers["x-request-id"] ?? randomUUID(),
+        platformAccessReason: request.headers["x-access-reason"],
       };
       return true;
     } catch {

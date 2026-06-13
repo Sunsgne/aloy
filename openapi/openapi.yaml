@@ -31,3 +31,47 @@ paths:
       responses:
         "201":
           description: Refresh token revoked.
+  /api/v1/tenants:
+    get:
+      operationId: listTenants
+      responses:
+        "200":
+          description: Active tenant list.
+        "403":
+          description: Missing tenant.read permission or platform access reason.
+    post:
+      operationId: createTenant
+      responses:
+        "201":
+          description: Tenant created and audited.
+  /api/v1/tenants/{id}:
+    get:
+      operationId: getTenant
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Tenant details.
+    patch:
+      operationId: updateTenant
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Tenant updated and audited.
+    delete:
+      operationId: deleteTenant
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Tenant soft deleted and audited.

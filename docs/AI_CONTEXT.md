@@ -18,6 +18,5 @@ routing, DNS, SNMP, link-quality, alerting, and SLA workflows.
 
 ## Current milestone
 
-Milestone 1: establish a runnable, testable project skeleton and infrastructure
-dependencies. Do not implement later milestone business features yet.
-
+Milestone 2: implement multi-tenancy, authentication, RBAC, auditing, and
+subscription quota management.

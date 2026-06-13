@@ -19,6 +19,8 @@ Milestone 2: Multi-tenancy and permissions.
 - Added hashed, rotating, revocable refresh tokens and logout.
 - Added default JWT authentication guard and server-side permission guard.
 - Added explicit public and required-permission route decorators.
+- Added platform tenant management APIs with permission checks, cross-tenant
+  access reasons, soft deletion, and transactional audit events.
 
 ## Database changes
 
@@ -34,6 +36,8 @@ Milestone 2: Multi-tenancy and permissions.
 - Added `POST /api/v1/auth/login`.
 - Added `POST /api/v1/auth/refresh`.
 - Added `POST /api/v1/auth/logout`.
+- Added `GET/POST /api/v1/tenants`.
+- Added `GET/PATCH/DELETE /api/v1/tenants/:id`.
 
 ## Known issues
 
@@ -54,4 +58,4 @@ Milestone 2: Multi-tenancy and permissions.
 
 ## Next task
 
-- Add tenant, user, role, permission, subscription, and audit services and APIs.
+- Add user, role, permission, subscription, and audit query services and APIs.
