@@ -1,0 +1,21 @@
+{
+  "name": "@aloy/trap-receiver",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/main.ts",
+    "lint": "eslint src --max-warnings=0",
+    "start": "tsx src/main.ts",
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@aloy/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "4.20.3"
+  }
+}
+

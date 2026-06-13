@@ -1,0 +1,17 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #f5f7fa;
+  color: #152238;
+  font-family: Arial, sans-serif;
+}
+
+main {
+  margin: 0 auto;
+  max-width: 1080px;
+  padding: 72px 24px;
+}
+
